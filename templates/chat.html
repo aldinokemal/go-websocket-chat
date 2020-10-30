@@ -324,7 +324,8 @@
                             <span><i style="color: darkgray; cursor: not-allowed" class="fas fa-phone"></i></span>
                         </div>
                     </div>
-                    <span id="action_menu_btn" style="color: darkgray; cursor: not-allowed"><i class="fas fa-ellipsis-v"></i></span>
+                    <span id="action_menu_btn" style="color: darkgray; cursor: not-allowed"><i
+                                class="fas fa-ellipsis-v"></i></span>
                     <div class="action_menu">
                         <ul>
                             <li><i class="fas fa-user-circle"></i> View profile</li>
@@ -343,13 +344,15 @@
                                 <span class="msg_time_send">{% m.time %}</span>
                             </div>
                             <div class="img_cont_msg">
-                                <img :src="`https://ui-avatars.com/api/?name=${m.name}`" class="rounded-circle user_img_msg"
+                                <img :src="`https://ui-avatars.com/api/?name=${m.name}`"
+                                     class="rounded-circle user_img_msg"
                                      draggable="false">
                             </div>
                         </div>
                         <div class="d-flex justify-content-start mb-4" v-else>
                             <div class="img_cont_msg">
-                                <img :src="`https://ui-avatars.com/api/?name=${m.name}`" class="rounded-circle user_img_msg"
+                                <img :src="`https://ui-avatars.com/api/?name=${m.name}`"
+                                     class="rounded-circle user_img_msg"
                                      draggable="false">
                             </div>
                             <div class="msg_cotainer">
@@ -394,7 +397,7 @@
             conn: null,
         },
         async created() {
-            setTimeout(() =>  $("#username").focus(), 100)
+            setTimeout(() => $("#username").focus(), 100)
             await this.gettingUUID();
             this.settingUpWebSocket()
         },
@@ -402,7 +405,8 @@
             settingUpWebSocket() {
                 if (window["WebSocket"]) {
                     this.isWebsocketExist = true;
-                    this.conn = new WebSocket("ws://" + document.location.host + "/ws");
+                    let ws = window.location.protocol === 'https:' ? 'wss' : 'ws'
+                    this.conn = new WebSocket(ws + "://" + document.location.host + "/ws");
                     this.conn.onclose = function (evt) {
                     };
                     this.conn.onmessage = (evt) => {
@@ -410,7 +414,7 @@
                         message.message = message.message.replace(/\n/g, "<br/>");
                         this.dataMessage.push(message)
 
-                        $(".msg_card_body").stop().animate({ scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
+                        $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
                     };
                 } else {
                     this.isWebsocketExist = false
@@ -424,7 +428,7 @@
             },
             setName() {
                 this.myName = $('#username').val()
-                setTimeout(() =>  $("#textMessage").focus(), 100)
+                setTimeout(() => $("#textMessage").focus(), 100)
 
             },
             sendMessage() {
