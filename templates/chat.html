@@ -288,7 +288,7 @@
 <!--Coded With Love By Mutiullah Samim-->
 <body>
 <div class="container-fluid h-100" id="vueapp">
-    <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
+    <div aria-live="assertive" role="alert" aria-atomic="true">
         <div style="position: absolute; top: 20px; right: 20px;">
             <div role="alert" aria-live="assertive" aria-atomic="true" class="toast" data-autohide="false">
                 <div class="toast-header">
@@ -309,7 +309,7 @@
         </div>
     </div>
 
-    <div class="row justify-content-center">
+    <div class="row justify-content-center h-100">
         <div class="col-md-4 col-xl-3 chat" v-if="myName == ''">
             <div class="cardPrompt mb-sm-3">
                 <div class="card-header">
@@ -338,14 +338,14 @@
                         </div>
                         <div class="user_info">
                             <span>Group Chat Golang</span>
-                            <p> {% onlineTotal %} online <br>
+                            <p style="cursor:pointer;" data-toggle="modal" data-target="#onlineModal"> {% onlineTotal %} online <br>
                                 {% this.dataMessage.length %} Messages
                             </p>
                         </div>
-                        <div class="video_cam">
+                        {{/*<div class="video_cam">
                             <span><i style="color: darkgray; cursor: not-allowed" class="fas fa-video"></i></span>
                             <span><i style="color: darkgray; cursor: not-allowed" class="fas fa-phone"></i></span>
-                        </div>
+                        </div>*/}}
                     </div>
                     <span id="action_menu_btn" style="color: darkgray; cursor: not-allowed"><i
                                 class="fas fa-ellipsis-v"></i></span>
@@ -404,6 +404,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="onlineModal" tabindex="-1" role="dialog" aria-labelledby="onlineModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="onlineModalLabel">Online Users</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ol>
+                        <li v-for="d in onlineData">
+                            {% d %}
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
@@ -419,10 +440,11 @@
             dataMessage: [],
             textMessage: '',
             onlineTotal: 0,
+            onlineData: [],
             conn: null,
         },
         created() {
-            setTimeout(() => $("#username").focus(), 100)
+            setTimeout(() => $("#username").focus(), 500)
         },
         methods: {
             settingUpWebSocket() {
@@ -449,6 +471,7 @@
                                 })
                                 $('.toast').toast('show')
                                 this.onlineTotal = data.message.total;
+                                this.onlineData = data.message.users;
                             }
                         }
 

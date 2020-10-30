@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
 	"net/http"
+	"sync"
 )
 
 type ResponseWs struct {
@@ -14,12 +15,19 @@ type ResponseWs struct {
 	Message interface{} `json:"message"`
 }
 
+type UserInfo struct {
+	Name string `json:"name"`
+}
+
 func main() {
 	r := gin.Default()
 	r.Static("/statics", "./statics")
 	r.LoadHTMLGlob("./templates/*.html") // load html template
+
 	m := melody.New()
 	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	dataUsers := make(map[*melody.Session]*UserInfo)
+	lock := new(sync.Mutex)
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "chat.html", nil)
@@ -38,12 +46,25 @@ func main() {
 	})
 
 	m.HandleConnect(func(s *melody.Session) {
+		lock.Lock()
 		name := s.Request.URL.Query().Get("name")
+		newUser := UserInfo{
+			Name: name,
+		}
 		s.Set("data", map[string]interface{}{"name": name})
+		dataUsers[s] = &newUser
+		var namaUsers []string
+
+		for _, key := range dataUsers {
+			namaUsers = append(namaUsers, key.Name)
+		}
+
 		message := map[string]interface{}{
 			"info":  name + " join chatroom",
 			"total": m.Len() + 1,
+			"users": namaUsers,
 		}
+		lock.Unlock()
 
 		data := ResponseWs{
 			Channel: "chatroom",
@@ -55,12 +76,24 @@ func main() {
 	})
 
 	m.HandleDisconnect(func(s *melody.Session) {
+		lock.Lock()
+		delete(dataUsers, s)
+
+		var namaUsers []string
+
+		for _, key := range dataUsers {
+			namaUsers = append(namaUsers, key.Name)
+		}
+
 		dataSession := s.Keys["data"].(map[string]interface{})
 		name := dataSession["name"].(string)
 		message := map[string]interface{}{
 			"info":  name + " left chatroom",
 			"total": m.Len() - 1,
+			"users": namaUsers,
 		}
+		lock.Unlock()
+
 		data := ResponseWs{
 			Channel: "chatroom",
 			Event:   "status",
