@@ -338,7 +338,8 @@
                         </div>
                         <div class="user_info">
                             <span>Group Chat Golang</span>
-                            <p style="cursor:pointer;" data-toggle="modal" data-target="#onlineModal"> {% onlineTotal %} online <br>
+                            <p style="cursor:pointer;" data-toggle="modal" data-target="#onlineModal"> {% onlineTotal %}
+                                online <br>
                                 {% this.dataMessage.length %} Messages
                             </p>
                         </div>
@@ -393,9 +394,11 @@
                             <span class="input-group-text attach_btn"><i class="fas fa-paperclip"></i></span>
                         </div>*/}}
                         <textarea v-model="textMessage" class="form-control type_msg" placeholder="Type your message..."
-                                  @keydown.enter.exact.prevent id="textMessage"
+                                  id="textMessage" @keyup="onPressText"
+                                  {{/*@keydown.enter.exact.prevent
                                   @keyup.enter.exact="sendMessage"
-                                  @keydown.enter.shift.exact="newline"></textarea>
+                                  @keydown.enter.shift.exact="newline"*/}}
+                        ></textarea>
                         <div class="input-group-append" @click="sendMessage">
                             <span class="input-group-text send_btn"><i class="fas fa-location-arrow"></i></span>
                         </div>
@@ -406,7 +409,8 @@
     </div>
 
     <!-- Modal -->
-    <div class="modal fade" id="onlineModal" tabindex="-1" role="dialog" aria-labelledby="onlineModalLabel" aria-hidden="true">
+    <div class="modal fade" id="onlineModal" tabindex="-1" role="dialog" aria-labelledby="onlineModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -418,7 +422,7 @@
                 <div class="modal-body">
                     <ol>
                         <li v-for="d in onlineData">
-                            {% d %}
+                            {% d.name %} {% d.uuid == myUUID ? '(You)' : '' %}
                         </li>
                     </ol>
                 </div>
@@ -459,12 +463,18 @@
                         const data = JSON.parse(evt.data)
                         if (data.channel === "chatroom") {
                             if (data.event === "message") {
-                                let message = JSON.parse(data.message)
+                                let message = data.message
+                                message.message = this.escapeHtml(message.message)
+                                message.message = message.message.replace(/ /g, "&nbsp;");
                                 message.message = message.message.replace(/\n/g, "<br/>");
                                 this.dataMessage.push(message)
                                 $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
                             } else if (data.event === 'status') {
-                                this.toastMessage = data.message.info
+                                let status = data.message
+                                if (this.myUUID === '') {
+                                    this.myUUID = status.target.uuid
+                                }
+                                this.toastMessage = status.info
                                 $('.toast').toast({
                                     autohide: true,
                                     delay: 5000,
@@ -480,15 +490,27 @@
                     this.isWebsocketExist = false
                 }
             },
-            gettingUUID() {
-                fetch("./uuid").then(response => response.json()).then(response => this.myUUID = response.uuid)
-            },
             newline() {
                 // this.textMessage = `${this.textMessage}\r\n`;
             },
+            escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            },
+            onPressText(event) {
+                if (event.keyCode === 13) {
+                    if (!event.shiftKey) {
+                        this.sendMessage()
+                    }
+                }
+
+            },
             async setName() {
                 this.myName = $('#username').val()
-                await this.gettingUUID();
                 await this.settingUpWebSocket()
                 setTimeout(() => $("#textMessage").focus(), 100)
 

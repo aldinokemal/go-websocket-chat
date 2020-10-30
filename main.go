@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -17,6 +18,14 @@ type ResponseWs struct {
 
 type UserInfo struct {
 	Name string `json:"name"`
+	UUID string `json:"uuid"`
+}
+
+type DataMessage struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+	Sender  string `json:"sender"`
+	Time    string `json:"time"`
 }
 
 func main() {
@@ -48,21 +57,27 @@ func main() {
 	m.HandleConnect(func(s *melody.Session) {
 		lock.Lock()
 		name := s.Request.URL.Query().Get("name")
+		token, _ := uuid.NewUUID()
 		newUser := UserInfo{
 			Name: name,
+			UUID: token.String(),
 		}
-		s.Set("data", map[string]interface{}{"name": name})
+		s.Set("data", newUser)
 		dataUsers[s] = &newUser
-		var namaUsers []string
+		var namaUsers []UserInfo
 
 		for _, key := range dataUsers {
-			namaUsers = append(namaUsers, key.Name)
+			namaUsers = append(namaUsers, UserInfo{
+				Name: key.Name,
+				UUID: key.UUID,
+			})
 		}
 
 		message := map[string]interface{}{
-			"info":  name + " join chatroom",
-			"total": m.Len() + 1,
-			"users": namaUsers,
+			"info":   strings.TrimLeft(name, " ") + " join chatroom",
+			"total":  m.Len() + 1,
+			"target": newUser,
+			"users":  namaUsers,
 		}
 		lock.Unlock()
 
@@ -79,18 +94,22 @@ func main() {
 		lock.Lock()
 		delete(dataUsers, s)
 
-		var namaUsers []string
+		var namaUsers []UserInfo
 
 		for _, key := range dataUsers {
-			namaUsers = append(namaUsers, key.Name)
+			namaUsers = append(namaUsers, UserInfo{
+				Name: key.Name,
+				UUID: key.UUID,
+			})
 		}
 
-		dataSession := s.Keys["data"].(map[string]interface{})
-		name := dataSession["name"].(string)
+		dataSession := s.Keys["data"].(UserInfo)
+		name := dataSession.Name
 		message := map[string]interface{}{
-			"info":  name + " left chatroom",
-			"total": m.Len() - 1,
-			"users": namaUsers,
+			"info":   name + " left chatroom",
+			"total":  m.Len() - 1,
+			"target": dataSession,
+			"users":  namaUsers,
 		}
 		lock.Unlock()
 
@@ -104,10 +123,15 @@ func main() {
 	})
 
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
+		var message DataMessage
+		if err := json.Unmarshal(msg, &message); err != nil {
+			panic(err)
+		}
+		message.Message = strings.Trim(message.Message, " ")
 		data := ResponseWs{
 			Channel: "chatroom",
 			Event:   "message",
-			Message: string(msg),
+			Message: message,
 		}
 		b, _ := json.Marshal(data)
 		_ = m.Broadcast(b)
