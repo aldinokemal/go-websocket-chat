@@ -1,18 +1,25 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
 	"net/http"
 )
 
+type ResponseWs struct {
+	Channel string      `json:"channel"`
+	Event   string      `json:"event"`
+	Message interface{} `json:"message"`
+}
+
 func main() {
 	r := gin.Default()
 	r.Static("/statics", "./statics")
 	r.LoadHTMLGlob("./templates/*.html") // load html template
 	m := melody.New()
+	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "chat.html", nil)
@@ -30,9 +37,47 @@ func main() {
 		c.JSON(http.StatusOK, result)
 	})
 
+	m.HandleConnect(func(s *melody.Session) {
+		name := s.Request.URL.Query().Get("name")
+		s.Set("data", map[string]interface{}{"name": name})
+		message := map[string]interface{}{
+			"info":  name + " join chatroom",
+			"total": m.Len() + 1,
+		}
+
+		data := ResponseWs{
+			Channel: "chatroom",
+			Event:   "status",
+			Message: message,
+		}
+		b, _ := json.Marshal(data)
+		_ = m.Broadcast(b)
+	})
+
+	m.HandleDisconnect(func(s *melody.Session) {
+		dataSession := s.Keys["data"].(map[string]interface{})
+		name := dataSession["name"].(string)
+		message := map[string]interface{}{
+			"info":  name + " left chatroom",
+			"total": m.Len() - 1,
+		}
+		data := ResponseWs{
+			Channel: "chatroom",
+			Event:   "status",
+			Message: message,
+		}
+		b, _ := json.Marshal(data)
+		_ = m.Broadcast(b)
+	})
+
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
-		fmt.Println(string(msg))
-		_ = m.Broadcast(msg)
+		data := ResponseWs{
+			Channel: "chatroom",
+			Event:   "message",
+			Message: string(msg),
+		}
+		b, _ := json.Marshal(data)
+		_ = m.Broadcast(b)
 	})
 
 	_ = r.Run(":2000")

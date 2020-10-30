@@ -3,15 +3,15 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Chat</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
-          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css"
-          integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css">
     <link rel="stylesheet" type="text/css"
           href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
 
     <style>
         body, html {
@@ -288,7 +288,28 @@
 <!--Coded With Love By Mutiullah Samim-->
 <body>
 <div class="container-fluid h-100" id="vueapp">
-    <div class="row justify-content-center h-100">
+    <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
+        <div style="position: absolute; top: 20px; right: 20px;">
+            <div role="alert" aria-live="assertive" aria-atomic="true" class="toast" data-autohide="false">
+                <div class="toast-header">
+                    <svg width="20" height="20" class="mr-2" viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,16.5L18,9.5L16.59,8.09L11,13.67L7.91,10.59L6.5,12L11,16.5Z"
+                              fill="#ccc"></path>
+                    </svg>
+                    <strong class="mr-auto">Notification</strong>
+                    {{/*<small>Now</small>*/}}
+                    <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="toast-body">
+                    {% toastMessage %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
         <div class="col-md-4 col-xl-3 chat" v-if="myName == ''">
             <div class="cardPrompt mb-sm-3">
                 <div class="card-header">
@@ -317,7 +338,9 @@
                         </div>
                         <div class="user_info">
                             <span>Group Chat Golang</span>
-                            <p>{% this.dataMessage.length %} Messages</p>
+                            <p> {% onlineTotal %} online <br>
+                                {% this.dataMessage.length %} Messages
+                            </p>
                         </div>
                         <div class="video_cam">
                             <span><i style="color: darkgray; cursor: not-allowed" class="fas fa-video"></i></span>
@@ -389,32 +412,46 @@
         el: "#vueapp",
         delimiters: ['{%', '%}'],
         data: {
+            toastMessage: '',
             myUUID: '',
             myName: '',
             isWebsocketExist: false,
             dataMessage: [],
             textMessage: '',
+            onlineTotal: 0,
             conn: null,
         },
-        async created() {
+        created() {
             setTimeout(() => $("#username").focus(), 100)
-            await this.gettingUUID();
-            this.settingUpWebSocket()
         },
         methods: {
             settingUpWebSocket() {
                 if (window["WebSocket"]) {
                     this.isWebsocketExist = true;
+
                     let ws = window.location.protocol === 'https:' ? 'wss' : 'ws'
-                    this.conn = new WebSocket(ws + "://" + document.location.host + "/ws");
+                    this.conn = new WebSocket(ws + "://" + document.location.host + "/ws?name=" + this.myName);
                     this.conn.onclose = function (evt) {
                     };
                     this.conn.onmessage = (evt) => {
-                        const message = JSON.parse(evt.data)
-                        message.message = message.message.replace(/\n/g, "<br/>");
-                        this.dataMessage.push(message)
+                        const data = JSON.parse(evt.data)
+                        if (data.channel === "chatroom") {
+                            if (data.event === "message") {
+                                let message = JSON.parse(data.message)
+                                message.message = message.message.replace(/\n/g, "<br/>");
+                                this.dataMessage.push(message)
+                                $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
+                            } else if (data.event === 'status') {
+                                this.toastMessage = data.message.info
+                                $('.toast').toast({
+                                    autohide: true,
+                                    delay: 5000,
+                                })
+                                $('.toast').toast('show')
+                                this.onlineTotal = data.message.total;
+                            }
+                        }
 
-                        $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
                     };
                 } else {
                     this.isWebsocketExist = false
@@ -426,8 +463,10 @@
             newline() {
                 // this.textMessage = `${this.textMessage}\r\n`;
             },
-            setName() {
+            async setName() {
                 this.myName = $('#username').val()
+                await this.gettingUUID();
+                await this.settingUpWebSocket()
                 setTimeout(() => $("#textMessage").focus(), 100)
 
             },
@@ -438,20 +477,6 @@
                 if (this.textMessage.trim().length === 0 || this.textMessage == null) {
                     return false;
                 } else {
-                    let month = new Array();
-                    month[0] = "January";
-                    month[1] = "February";
-                    month[2] = "March";
-                    month[3] = "April";
-                    month[4] = "May";
-                    month[5] = "June";
-                    month[6] = "July";
-                    month[7] = "August";
-                    month[8] = "September";
-                    month[9] = "October";
-                    month[10] = "November";
-                    month[11] = "December";
-
                     let time = new Date()
                     let sendingTime = `${time.getHours()}:${time.getUTCMinutes()}`
                     const sending = {
