@@ -1,4 +1,4 @@
-##Golang WebSocket (Chatting room)
+## Golang WebSocket (Chatting room)
 
 1. clone this `git clone https://github.com/aldinokemal/go-websocket-chat`
 1. run `go run main.go`
@@ -13,4 +13,4 @@ Picture 2 (chat room)
 Picture 3 (online users)
 ![picture 1 (chat room)](https://i.ibb.co/K2VM70K/Screen-Shot-2020-10-31-at-6-40-16-AM.png "picture 2 (List Online User)")
 
-##[Demo here](http://go-chat.hydrogendioxide.net)
+## [Demo here](http://go-chat.hydrogendioxide.net)
