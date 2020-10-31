@@ -22,11 +22,18 @@ type UserInfo struct {
 	UUID string `json:"uuid"`
 }
 
+type FileType struct {
+	FileName string `json:"filename"`
+	Type     string `json:"type"`
+	Url      string `json:"url"`
+}
+
 type DataMessage struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
-	Sender  string `json:"sender"`
-	Time    string `json:"time"`
+	Name    string   `json:"name"`
+	Message string   `json:"message"`
+	Sender  string   `json:"sender"`
+	Time    string   `json:"time"`
+	File    FileType `json:"file"`
 }
 
 func main() {
