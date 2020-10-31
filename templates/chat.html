@@ -481,7 +481,7 @@
                                     delay: 5000,
                                 })
                                 $('.toast').toast('show')
-                                this.onlineTotal = data.message.total;
+                                this.onlineTotal = data.message.users.length;
                                 this.onlineData = data.message.users;
                             }
                         }
@@ -511,10 +511,12 @@
 
             },
             async setName() {
-                this.myName = $('#username').val()
-                await this.settingUpWebSocket()
-                setTimeout(() => $("#textMessage").focus(), 100)
-
+                let name = $('#username').val()
+                if (name !== "" && name != null) {
+                    this.myName = name
+                    await this.settingUpWebSocket()
+                    setTimeout(() => $("#textMessage").focus(), 100)
+                }
             },
             sendMessage() {
                 if (!(this.conn.readyState === this.conn.OPEN)) {
