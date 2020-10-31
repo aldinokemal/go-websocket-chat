@@ -457,7 +457,8 @@
 
                     let ws = window.location.protocol === 'https:' ? 'wss' : 'ws'
                     this.conn = new WebSocket(ws + "://" + document.location.host + "/ws?name=" + this.myName);
-                    this.conn.onclose = function (evt) {
+                    this.conn.onclose = (evt) => {
+                        console.log(evt)
                     };
                     this.conn.onmessage = (evt) => {
                         const data = JSON.parse(evt.data)
