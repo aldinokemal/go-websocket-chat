@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gopkg.in/olahol/melody.v1"
@@ -34,7 +35,7 @@ func main() {
 	r.LoadHTMLGlob("./templates/*.html") // load html template
 
 	m := melody.New()
-	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	//m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true } // origni check
 	dataUsers := make(map[*melody.Session]*UserInfo)
 	lock := new(sync.Mutex)
 
@@ -128,6 +129,8 @@ func main() {
 			panic(err)
 		}
 		message.Message = strings.Trim(message.Message, " ")
+		message.Message = strings.Trim(message.Message, "\n")
+		fmt.Println(message)
 		data := ResponseWs{
 			Channel: "chatroom",
 			Event:   "message",
