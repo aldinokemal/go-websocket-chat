@@ -12,6 +12,8 @@
     <script src="/statics/js/bootstrap.min.js"></script>
     <script src="/statics/js/jquery.mCustomScrollbar.min.js"></script>
     <script src="/statics/js/browser-image-compression.js"></script>
+    <script src="/statics/js/mobile-detect.min.js"></script>
+
 
 </head>
 <!--Coded With Love By Mutiullah Samim-->
@@ -260,12 +262,10 @@
                     .replace(/'/g, "&#039;");
             },
             onPressText(event) {
-                if (event.keyCode === 13) {
-                    if (!event.shiftKey) {
-                        this.sendMessage()
-                    }
+                const md = new MobileDetect(window.navigator.userAgent);
+                if (md.phone() == null && event.keyCode === 13 && !event.shiftKey) {
+                    this.sendMessage()
                 }
-
             },
             previewImage(data) {
                 if (data.file.type === 'image') {
