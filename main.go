@@ -42,7 +42,8 @@ func main() {
 	r.LoadHTMLGlob("./templates/*.html") // load html template
 
 	m := melody.New()
-	//m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true } // origni check
+	m.Config.MaxMessageSize = 2000
+	m.Upgrader.CheckOrigin = func(r *http.Request) bool { return true } // origni check
 	dataUsers := make(map[*melody.Session]*UserInfo)
 	lock := new(sync.Mutex)
 

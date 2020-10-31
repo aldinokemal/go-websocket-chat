@@ -11,6 +11,7 @@
     <script src="/statics/js/jquery.min.js"></script>
     <script src="/statics/js/bootstrap.min.js"></script>
     <script src="/statics/js/jquery.mCustomScrollbar.min.js"></script>
+    <script src="/statics/js/browser-image-compression.js"></script>
 
 </head>
 <!--Coded With Love By Mutiullah Samim-->
@@ -43,7 +44,7 @@
                 <div class="card-header">
                     <div class="input-group">
                         <input id="username" type="text" placeholder="YourName..." name="" class="form-control search"
-                               @keyup.enter="setName" autofocus>
+                               @keyup.enter="setName" autofocus maxlength="100">
                         <div class="input-group-prepend">
                             <span class="input-group-text search_btn"><i class="fas fa-user"></i></span>
                         </div>
@@ -126,7 +127,7 @@
                                         class="fas fa-paperclip"></i></span>
                         </div>
                         <textarea v-model="textMessage" class="form-control type_msg" placeholder="Type your message..."
-                                  id="textMessage" @keyup="onPressText"
+                                  id="textMessage" @keyup="onPressText" maxlength="1000"
                                   {{/*@keydown.enter.exact.prevent
                                   @keyup.enter.exact="sendMessage"
                                   @keydown.enter.shift.exact="newline"*/}}
@@ -269,7 +270,7 @@
             previewImage(data) {
                 if (data.file.type === 'image') {
                     this.previewImageName = data.file.filename;
-                    this.previewImageURL = `<img src="${data.file.url}" style="width: 100%">`
+                    this.previewImageURL = `<img src="${data.file.url}" style="width: 100%" draggable="false">`
                     $("#previewImageModal").modal("show")
                 }
             },
@@ -281,27 +282,41 @@
                     setTimeout(() => $("#textMessage").focus(), 100)
                 }
             },
-            processUpload(data) {
+            async processUpload(data) {
                 const images = data.target.files[0];
-                if (images.size > 1000000) {
-                    this.toastMessage = "Max Uploaded Size Is 1MB"
+                if (images.size > 10000000) {
+                    this.toastMessage = "Max Uploaded Size Is 10MB"
                     $('.toast').toast({
                         autohide: true,
                         delay: 10000,
                     })
                     $('.toast').toast('show')
                 } else {
-                    let formData = new FormData();
-                    formData.append("image", images)
-
-                    const url = "https://api.imgbb.com/1/upload?expiration=10&key=a10724fae77ea714c71642ec9f374890";
-                    const option = {
-                        method: "POST",
-                        body: formData
+                    const options = {
+                        maxSizeMB: 1,
+                        maxWidthOrHeight: 600,
+                        useWebWorker: true
                     }
-                    fetch(url, option)
-                        .then(response => response.json())
-                        .then(response => this.sendMessageImages(response.data.image));
+
+                    try {
+                        const compressedFile = await imageCompression(images, options);
+                        console.log('compressedFile instanceof Blob', compressedFile instanceof Blob); // true
+                        console.log(`compressedFile size ${compressedFile.size / 1024 / 1024} MB`); // smaller than maxSizeMB
+
+                        let formData = new FormData();
+                        formData.append("image", compressedFile)
+
+                        const url = "https://api.imgbb.com/1/upload?expiration=10&key=a10724fae77ea714c71642ec9f374890";
+                        const option = {
+                            method: "POST",
+                            body: formData
+                        }
+                        fetch(url, option)
+                            .then(response => response.json())
+                            .then(response => this.sendMessageImages(response.data.image));
+                    } catch (error) {
+                        console.log(error);
+                    }
                 }
             },
             sendMessage() {
@@ -327,6 +342,8 @@
 
                     this.conn.send(JSON.stringify(sending))
                     this.textMessage = ""
+                    $("#textMessage").focus()
+                    $("#textMessage").click()
 
                 }
             },

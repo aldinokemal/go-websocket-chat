@@ -197,6 +197,7 @@ body, html {
     background-color: #78e08f;
     padding: 10px;
     position: relative;
+    max-width: 90%;
 }
 
 .msg_time {
