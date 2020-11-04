@@ -29,17 +29,18 @@ type FileType struct {
 }
 
 type DataMessage struct {
-	Name    string   `json:"name"`
-	Message string   `json:"message"`
-	Sender  string   `json:"sender"`
-	Time    string   `json:"time"`
-	File    FileType `json:"file"`
+	MessageID string   `json:"message_id"`
+	Name      string   `json:"name"`
+	Message   string   `json:"message"`
+	Sender    string   `json:"sender"`
+	Time      string   `json:"time"`
+	File      FileType `json:"file"`
 }
 
 func main() {
 	r := gin.Default()
 	r.Static("/statics", "./statics")
-	r.LoadHTMLGlob("./templates/*.html") // load html template
+	r.LoadHTMLGlob("./templates/*") // load html template
 
 	m := melody.New()
 	m.Config.MaxMessageSize = 2000
@@ -51,6 +52,10 @@ func main() {
 		c.HTML(http.StatusOK, "chat.html", nil)
 	})
 
+	r.GET("sw.js", func(c *gin.Context) {
+		c.Header("Content-Type", "application/javascript")
+		c.HTML(http.StatusOK, "sw.js", nil)
+	})
 	r.GET("/ws", func(c *gin.Context) {
 		_ = m.HandleRequest(c.Writer, c.Request)
 	})
@@ -136,6 +141,8 @@ func main() {
 		if err := json.Unmarshal(msg, &message); err != nil {
 			panic(err)
 		}
+		token, _ := uuid.NewUUID()
+		message.MessageID = "msg-" + token.String()
 		message.Message = strings.Trim(message.Message, " ")
 		message.Message = strings.Trim(message.Message, "\n")
 		fmt.Println(message)
