@@ -93,7 +93,11 @@
                                 <img :src="`https://ui-avatars.com/api/?name=${m.name}`"
                                      class="rounded-circle user_img_msg"
                                      draggable="false">
+                                <div class="unsent" @click="unsent(m.message_id)">
+                                    <i class="fas fa-undo"></i>
+                                </div>
                             </div>
+
                         </div>
                         <div class="d-flex justify-content-start mb-4" v-else>
                             <div class="img_cont_msg">
@@ -183,6 +187,7 @@
 </script>
 <script src="/statics/js/jquery.min.js"></script>
 <script src="/statics/js/bootstrap.min.js"></script>
+<script src="/statics/js/bootbox.min.js"></script>
 <script src="/statics/js/jquery.mCustomScrollbar.min.js"></script>
 <script src="/statics/js/browser-image-compression.js"></script>
 <script src="/statics/js/mobile-detect.min.js"></script>

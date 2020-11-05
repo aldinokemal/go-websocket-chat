@@ -2,16 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	"gopkg.in/olahol/melody.v1"
 	"net/http"
 	"strings"
 	"sync"
 )
 
-type ResponseWs struct {
+type WebsocketData struct {
 	Channel string      `json:"channel"`
 	Event   string      `json:"event"`
 	Message interface{} `json:"message"`
@@ -70,11 +70,17 @@ func main() {
 
 	m.HandleConnect(func(s *melody.Session) {
 		lock.Lock()
+		var token string
 		name := s.Request.URL.Query().Get("name")
-		token, _ := uuid.NewUUID()
+		token = s.Request.URL.Query().Get("uuid")
+		if token == "" {
+			t, _ := uuid.NewUUID()
+			token = t.String()
+		}
+
 		newUser := UserInfo{
 			Name: name,
-			UUID: token.String(),
+			UUID: token,
 		}
 		s.Set("data", newUser)
 		dataUsers[s] = &newUser
@@ -95,7 +101,7 @@ func main() {
 		}
 		lock.Unlock()
 
-		data := ResponseWs{
+		data := WebsocketData{
 			Channel: "chatroom",
 			Event:   "status",
 			Message: message,
@@ -127,7 +133,7 @@ func main() {
 		}
 		lock.Unlock()
 
-		data := ResponseWs{
+		data := WebsocketData{
 			Channel: "chatroom",
 			Event:   "status",
 			Message: message,
@@ -137,22 +143,37 @@ func main() {
 	})
 
 	m.HandleMessage(func(s *melody.Session, msg []byte) {
-		var message DataMessage
-		if err := json.Unmarshal(msg, &message); err != nil {
+		var WsData WebsocketData
+		if err := json.Unmarshal(msg, &WsData); err != nil {
 			panic(err)
 		}
-		token, _ := uuid.NewUUID()
-		message.MessageID = "msg-" + token.String()
-		message.Message = strings.Trim(message.Message, " ")
-		message.Message = strings.Trim(message.Message, "\n")
-		fmt.Println(message)
-		data := ResponseWs{
-			Channel: "chatroom",
-			Event:   "message",
-			Message: message,
+
+		if WsData.Channel == "chatroom" {
+			if WsData.Event == "send_message_text" || WsData.Event == "send_message_image" {
+				var message DataMessage
+				_ = mapstructure.Decode(WsData.Message, &message)
+				token, _ := uuid.NewUUID()
+				message.MessageID = "msg-" + token.String()
+				message.Message = strings.Trim(message.Message, " ")
+				message.Message = strings.Trim(message.Message, "\n")
+				data := WebsocketData{
+					Channel: WsData.Channel,
+					Event:   WsData.Event,
+					Message: message,
+				}
+				b, _ := json.Marshal(data)
+				_ = m.Broadcast(b)
+			} else if WsData.Event == "unsend_message" {
+				data := WebsocketData{
+					Channel: WsData.Channel,
+					Event:   WsData.Event,
+					Message: WsData.Message,
+				}
+				b, _ := json.Marshal(data)
+				_ = m.Broadcast(b)
+			}
 		}
-		b, _ := json.Marshal(data)
-		_ = m.Broadcast(b)
+
 	})
 
 	_ = r.Run(":2000")

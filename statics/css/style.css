@@ -263,6 +263,13 @@ body, html {
     background-color: rgba(0, 0, 0, 0.2);
 }
 
+.img_cont_msg .unsent {
+    color: lightgrey;
+    float: right;
+    padding-top: 5px;
+    font-size: 12px;
+}
+
 @media (max-width: 576px) {
     .contacts_card {
         margin-bottom: 15px !important;

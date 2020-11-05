@@ -45,6 +45,12 @@ new Vue({
     el: "#vueapp",
     delimiters: ['{%', '%}'],
     data: {
+        ws_channel: "chatroom",
+        ws_data: {
+            channel: "chatroom",
+            event: "",
+            message: {}
+        },
         toastMessage: '',
         myUUID: '',
         myName: '',
@@ -87,23 +93,36 @@ new Vue({
                 this.isWebsocketExist = true;
 
                 let ws = window.location.protocol === 'https:' ? 'wss' : 'ws'
-                this.conn = new WebSocket(ws + "://" + document.location.host + "/ws?name=" + this.myName);
+                if (this.myUUID !== "") {
+                    this.conn = new WebSocket(ws + "://" + document.location.host + "/ws?name=" + this.myName + "&uuid=" + this.myUUID);
+                } else {
+                    this.conn = new WebSocket(ws + "://" + document.location.host + "/ws?name=" + this.myName);
+                }
                 this.conn.onclose = (evt) => {
                     console.log("connection closed")
                 };
                 this.conn.onmessage = (evt) => {
                     const data = JSON.parse(evt.data)
                     if (data.channel === "chatroom") {
-                        if (data.event === "message") {
+                        if (data.event === "send_message_text") {
                             let message = data.message
-                            if (message.file.type === "text") {
-                                message.message = this.escapeHtml(message.message)
-                                message.message = message.message.replace(/ /g, "&nbsp;");
-                                message.message = message.message.replace(/\n/g, "<br/>");
-                            }
+
+                            message.message = this.escapeHtml(message.message)
+                            message.message = message.message.replace(/ /g, "&nbsp;");
+                            message.message = message.message.replace(/\n/g, "<br/>");
 
                             dbMessage.set(message.message_id, message).then(() => this.dataMessage.push(message))
                             $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
+
+                        } else if (data.event === "send_message_image") {
+                            let message = data.message
+                            dbMessage.set(message.message_id, message).then(() => this.dataMessage.push(message))
+                            $(".msg_card_body").stop().animate({scrollTop: $(".msg_card_body")[0].scrollHeight}, 1000);
+                        } else if (data.event === "unsend_message") {
+                            let message = data.message
+                            dbMessage.delete(message.message_id).then(() => {
+                                this.dataMessage = this.dataMessage.filter(e => e.message_id !== message.message_id)
+                            })
                         } else if (data.event === 'status') {
                             let status = data.message
                             if (this.myUUID === '') {
@@ -219,10 +238,12 @@ new Vue({
                     }
                 };
 
-                this.conn.send(JSON.stringify(sending))
+                this.ws_data.event = "send_message_text"
+                this.ws_data.message = sending
+
+                this.conn.send(JSON.stringify(this.ws_data))
                 this.textMessage = ""
-                $("#textMessage").focus()
-                $("#textMessage").click()
+                $("#textMessage").focus().click()
 
             }
         },
@@ -242,7 +263,33 @@ new Vue({
                 }
             };
 
-            this.conn.send(JSON.stringify(sending))
+            this.ws_data.event = "send_message_image"
+            this.ws_data.message = sending
+            this.conn.send(JSON.stringify(this.ws_data))
+        },
+        unsent(message_id) {
+            bootbox.confirm({
+                centerVertical: true,
+                size: 'small',
+                message: "Unsent message ?",
+                buttons: {
+                    cancel: {
+                        label: '<i class="fa fa-times"></i> Cancel',
+                        className: 'btn-secondary btn-sm'
+                    },
+                    confirm: {
+                        label: '<i class="fa fa-check"></i> Yes',
+                        className: 'btn-danger btn-sm'
+                    }
+                },
+                callback: (result) => {
+                    if (result) {
+                        this.ws_data.event = "unsend_message"
+                        this.ws_data.message = {"message_id": message_id}
+                        this.conn.send(JSON.stringify(this.ws_data))
+                    }
+                }
+            });
         },
         async logout() {
             await dbAccount.clear()
