@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -57,7 +58,10 @@ func main() {
 		c.HTML(http.StatusOK, "sw.js", nil)
 	})
 	r.GET("/ws", func(c *gin.Context) {
-		_ = m.HandleRequest(c.Writer, c.Request)
+		err := m.HandleRequest(c.Writer, c.Request)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	})
 
 	r.GET("/uuid", func(c *gin.Context) {
